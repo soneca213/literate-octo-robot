@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Dívidas Pro</title>
+    <style>
+        :root {
+            --primary: #1e3c72;
+            --secondary: #2a5298;
+            --accent: #2ecc71;
+            --bg: #f0f4f8;
+            --text: #2c3e50;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            margin: 0; 
+            padding: 20px;
+            min-height: 100vh;
+            color: var(--text);
+        }
+
+        .container { 
+            max-width: 450px; 
+            margin: auto; 
+            background: rgba(255, 255, 255, 0.95); 
+            padding: 25px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+        }
+
+        h2 { text-align: center; color: var(--primary); margin-top: 0; }
+
+        .input-group { margin-bottom: 15px; }
+        
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 5px 0; 
+            border: 2px solid #ddd; 
+            border-radius: 10px; 
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus { border-color: var(--accent); }
+
+        .btn { 
+            width: 100%; 
+            padding: 14px; 
+            margin-top: 10px; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+
+        .btn-add { background: var(--accent); color: white; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
+        .btn-add:hover { background: #27ae60; transform: translateY(-2px); }
+
+        .btn-share { background: var(--secondary); color: white; }
+        .btn-del { background: #e74c3c; color: white; margin-top: 20px; }
+
+        .lista-container { margin-top: 30px; }
+        
+        .card { 
+            background: white; 
+            border-left: 5px solid var(--accent);
+            padding: 15px; 
+            margin-bottom: 12px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: 0.2s;
+        }
+
+        .card:hover { transform: scale(1.02); background: #f9f9f9; }
+
+        .card-info strong { font-size: 1.1em; color: var(--primary); }
+        .card-price { font-weight: bold; color: var(--accent); }
+
+        /* Estilo da Nota Fiscal */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.6); 
+            backdrop-filter: blur(5px);
+            justify-content: center; 
+            align-items: center; 
+            z-index: 1000;
+        }
+
+        .modal-content { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 20px; 
+            width: 85%; 
+            max-width: 380px; 
+        }
+
+        .nf-box { 
+            border: 1px solid #eee; 
+            padding: 20px; 
+            background: #fafafa;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .nf-box::before {
+            content: "";
+            position: absolute;
+            top: -5px; left: 0; right: 0;
+            height: 10px;
+            background-image: radial-gradient(circle, transparent 70%, #fafafa 70%);
+            background-size: 15px 15px;
+        }
+
+        .total-destaque {
+            font-size: 1.4em;
+            color: var(--primary);
+            text-align: center;
+            border-top: 2px dashed #ccc;
+            padding-top: 10px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>➕ Nova Dívida</h2>
+    <div class="input-group">
+        <input type="text" id="nome" placeholder="👤 Nome da Pessoa">
+        <input type="text" id="local" placeholder="📍 Local (ex: Loja do Zé)">
+        <input type="number" id="valor" placeholder="💰 Valor da Parcela (R$)">
+        <input type="number" id="parcelas" placeholder="🔢 Qtde de Parcelas">
+    </div>
+    <button class="btn btn-add" onclick="adicionarDivida()">Salvar Dívida</button>
+
+    <div class="lista-container">
+        <h3 style="color: var(--primary);">📋 Devedores</h3>
+        <div id="lista-dividas"></div>
+    </div>
+</div>
+
+<div id="modal-nf" class="modal">
+    <div class="modal-content">
+        <div id="conteudo-nf" class="nf-box">
+            <h3 style="text-align: center; margin-bottom: 5px;">COMPROVANTE</h3>
+            <p style="text-align: center; font-size: 0.8em; color: #888; margin-bottom: 20px;">Gerado via Monitor de Dívidas</p>
+            
+            <p><strong>Devedor:</strong> <span id="nf-nome"></span></p>
+            <p><strong>Origem:</strong> <span id="nf-local"></span></p>
+            <p><strong>Plano:</strong> <span id="nf-parcelas"></span>x de R$ <span id="nf-valor-p"></span></p>
+            
+            <div class="total-destaque">
+                TOTAL: R$ <span id="nf-total"></span>
+            </div>
+        </div>
+        <button class="btn btn-share" onclick="compartilharNF()">📲 Enviar via WhatsApp</button>
+        <button class="btn btn-del" onclick="removerDivida()">🗑️ Excluir Registro</button>
+        <button class="btn" onclick="fecharModal()" style="background:#ddd;">Fechar</button>
+    </div>
+</div>
+
+<script>
+    let dividas = JSON.parse(localStorage.getItem('dividas')) || [];
+    let dividaAtualIndex = null;
+
+    function salvar() {
+        localStorage.setItem('dividas', JSON.stringify(dividas));
+        renderizar();
+    }
+
+    function adicionarDivida() {
+        const nome = document.getElementById('nome').value;
+        const local = document.getElementById('local').value;
+        const valor = document.getElementById('valor').value;
+        const parcelas = document.getElementById('parcelas').value;
+
+        if(!nome || !valor) return alert("Por favor, preencha o nome e o valor!");
+
+        dividas.push({ 
+            nome, 
+            local: local || "Geral", 
+            valor: parseFloat(valor), 
+            parcelas: parseInt(parcelas) || 1 
+        });
+        
+        salvar();
+        limparCampos();
+    }
+
+    function renderizar() {
+        const lista = document.getElementById('lista-dividas');
+        lista.innerHTML = '';
+        dividas.forEach((d, index) => {
+            const total = (d.valor * d.parcelas).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            lista.innerHTML += `
+                <div class="card" onclick="abrirNF(${index})">
+                    <div class="card-info">
+                        <strong>${d.nome}</strong><br>
+                        <small>${d.local}</small>
+                    </div>
+                    <div class="card-price">R$ ${total}</div>
+                </div>`;
+        });
+    }
+
+    function abrirNF(index) {
+        dividaAtualIndex = index;
+        const d = dividas[index];
+        const total = (d.valor * d.parcelas).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        
+        document.getElementById('nf-nome').innerText = d.nome;
+        document.getElementById('nf-local').innerText = d.local;
+        document.getElementById('nf-parcelas').innerText = d.parcelas;
+        document.getElementById('nf-valor-p').innerText = d.valor.toFixed(2);
+        document.getElementById('nf-total').innerText = total;
+        
+        document.getElementById('modal-nf').style.display = 'flex';
+    }
+
+    function fecharModal() { document.getElementById('modal-nf').style.display = 'none'; }
+
+    function removerDivida() {
+        if(confirm("Deseja realmente excluir esta dívida?")) {
+            dividas.splice(dividaAtualIndex, 1);
+            salvar();
+            fecharModal();
+        }
+    }
+
+    function compartilharNF() {
+        const d = dividas[dividaAtualIndex];
+        const total = (d.valor * d.parcelas).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        const texto = `*EXTRATO DE DÍVIDA*%0A--------------------------%0A*Cliente:* ${d.nome}%0A*Local:* ${d.local}%0A*Parcelamento:* ${d.parcelas}x de R$ ${d.valor.toFixed(2)}%0A--------------------------%0A*VALOR TOTAL:* R$ ${total}%0A--------------------------`;
+        window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
+    }
+
+    function limparCampos() {
+        document.getElementById('nome').value = '';
+        document.getElementById('local').value = '';
+        document.getElementById('valor').value = '';
+        document.getElementById('parcelas').value = '';
+    }
+
+    renderizar();
+</script>
+</body>
+</html>
